@@ -107,6 +107,22 @@ def apply_dashboard_styles() -> None:
             position: relative;
             overflow: hidden;
         }
+        .hero-brand {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            margin: 0 0 10px 0;
+        }
+        .hero-logo {
+            height: 58px;
+            width: auto;
+            display: block;
+            filter: saturate(0.92) contrast(1.02);
+        }
+        .hero-copy {
+            display: flex;
+            flex-direction: column;
+        }
         .dashboard-hero::before {
             content: "";
             position: absolute;
@@ -241,6 +257,16 @@ def apply_dashboard_styles() -> None:
         }
         .stCheckbox > label, .stRadio > label, .stMarkdown, .stCaption {
             color: var(--lt-ink) !important;
+        }
+        @media (max-width: 720px) {
+            .hero-brand {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .hero-logo {
+                height: 48px;
+            }
         }
         </style>
         """,
@@ -719,8 +745,12 @@ def build_momentum_chart(filtered_frames: dict[str, pd.DataFrame], focus_competi
 def build_scorecard_table(summary_df: pd.DataFrame) -> pd.DataFrame:
     table_df = summary_df.copy()
     table_df["Avg. Duration"] = table_df["Avg. Duration (s)"].apply(format_seconds_label)
-    table_df["Visits"] = table_df["Visits"].round(0).astype(int)
-    table_df["Page Views"] = table_df["Page Views"].round(0).astype(int)
+    table_df["Visits"] = table_df["Visits"].apply(lambda value: f"{value:,.2f}")
+    table_df["Page Views"] = table_df["Page Views"].apply(lambda value: f"{value:,.2f}")
+    table_df["Pages / Visit"] = table_df["Pages / Visit"].apply(lambda value: f"{value:.2f}")
+    table_df["Bounce Rate (%)"] = table_df["Bounce Rate (%)"].apply(lambda value: f"{value:.2f}%")
+    table_df["Desktop (%)"] = table_df["Desktop (%)"].apply(lambda value: f"{value:.2f}%")
+    table_df["Mobile (%)"] = table_df["Mobile (%)"].apply(lambda value: f"{value:.2f}%")
     table_df["WoW Latest"] = table_df["WoW Latest (%)"].apply(format_delta)
     return table_df[
         [
@@ -1402,12 +1432,31 @@ def render_benchmark_dashboard() -> None:
             "Momentum semanal",
             "Variacion porcentual semana contra semana para separar escala de impulso reciente.",
         )
-        if PRIMARY_SITE in filtered_frames and focus_competitor in filtered_frames and len(filtered_frames[PRIMARY_SITE]) > 1:
+        momentum_header_left, momentum_header_right = st.columns([0.78, 0.22], vertical_alignment="center")
+        with momentum_header_left:
+            st.markdown(
+                "<div style='font-size:0.82rem;color:#675b4e;margin:0 0 8px 2px;'>Selecciona un competidor para contrastar el impulso semanal de Loco Tequila sin afectar otras vistas.</div>",
+                unsafe_allow_html=True,
+            )
+        with momentum_header_right:
+            momentum_competitor = st.selectbox(
+                "Competidor momentum",
+                options=competitors,
+                index=0,
+                format_func=display_site_name,
+                label_visibility="collapsed",
+                key="momentum_competitor_selector",
+            )
+        if (
+            PRIMARY_SITE in filtered_frames
+            and momentum_competitor in filtered_frames
+            and len(filtered_frames[PRIMARY_SITE]) > 1
+        ):
             st.plotly_chart(
-                build_momentum_chart(filtered_frames, focus_competitor),
+                build_momentum_chart(filtered_frames, momentum_competitor),
                 use_container_width=True,
             )
-            render_insight_box("Insight", build_momentum_insight(filtered_frames, focus_competitor))
+            render_insight_box("Insight", build_momentum_insight(filtered_frames, momentum_competitor))
         else:
             st.info("Se requieren al menos dos semanas visibles para comparar momentum.")
         close_chart_shell()
@@ -1540,8 +1589,13 @@ def render_app() -> None:
     st.markdown(
         """
         <div class="dashboard-hero">
-            <div class="hero-kicker">Nuestra Colección | Terruño | Proceso</div>
-            <h1>WTA Loco Tequila</h1>
+            <div class="hero-brand">
+                <img class="hero-logo" src="https://www.locotequila.mx/hubfs/Loco_Tequila_Logo.svg" alt="Loco Tequila logo">
+                <div class="hero-copy">
+                    <div class="hero-kicker">Nuestra Colección | Terruño | Proceso</div>
+                    <h1>WTA Loco Tequila</h1>
+                </div>
+            </div>
             <p>Dashboard estratégico para entender la posición digital de Loco Tequila frente a su benchmark competitivo, identificar brechas de alcance y calidad de tráfico, y detectar dónde existe mayor oportunidad para fortalecer visibilidad, consideración y profundidad de engagement.</p>
         </div>
         """,
