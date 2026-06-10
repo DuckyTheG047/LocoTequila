@@ -977,8 +977,8 @@ def build_progressive_funnel_values(site_row: pd.Series) -> list[tuple[str, floa
     deep_engagement = non_bounced * depth_factor
     return [
         ("Visits", visits),
-        ("Unique Visitors", unique_visitors),
         ("Non-Bounced", non_bounced),
+        ("Unique Visitors", unique_visitors),
         ("Deep Engagement", deep_engagement),
     ]
 
